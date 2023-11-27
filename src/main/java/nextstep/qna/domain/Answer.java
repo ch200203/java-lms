@@ -1,12 +1,13 @@
 package nextstep.qna.domain;
 
+import nextstep.qna.CannotDeleteException;
 import nextstep.qna.NotFoundException;
 import nextstep.qna.UnAuthorizedException;
 import nextstep.users.domain.NsUser;
 
 import java.time.LocalDateTime;
 
-public class Answer {
+public class Answer implements QnA {
     private Long id;
 
     private NsUser writer;
@@ -50,6 +51,13 @@ public class Answer {
     public Answer setDeleted(boolean deleted) {
         this.deleted = deleted;
         return this;
+    }
+
+    public void delete(final NsUser user) throws CannotDeleteException {
+        if (!isOwner(user)) {
+            throw new CannotDeleteException("당신은 삭제 권한이 없습니다.");
+        }
+        this.deleted = true;
     }
 
     public boolean isDeleted() {

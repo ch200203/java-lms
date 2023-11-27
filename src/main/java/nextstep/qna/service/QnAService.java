@@ -1,5 +1,6 @@
 package nextstep.qna.service;
 
+import javax.swing.undo.CannotUndoException;
 import nextstep.qna.CannotDeleteException;
 import nextstep.qna.NotFoundException;
 import nextstep.qna.domain.*;
@@ -14,6 +15,7 @@ import java.util.List;
 
 @Service("qnaService")
 public class QnAService {
+
     @Resource(name = "questionRepository")
     private QuestionRepository questionRepository;
 
@@ -24,8 +26,9 @@ public class QnAService {
     private DeleteHistoryService deleteHistoryService;
 
     @Transactional
-    public void deleteQuestion(NsUser loginUser, long questionId) throws CannotDeleteException {
-        Question question = questionRepository.findById(questionId).orElseThrow(NotFoundException::new);
+    public void deleteQuestion(NsUser loginUser, long questionId, int a) throws CannotDeleteException {
+        Question question = questionRepository.findById(questionId)
+            .orElseThrow(NotFoundException::new);
         if (!question.isOwner(loginUser)) {
             throw new CannotDeleteException("질문을 삭제할 권한이 없습니다.");
         }
@@ -39,11 +42,25 @@ public class QnAService {
 
         List<DeleteHistory> deleteHistories = new ArrayList<>();
         question.setDeleted(true);
-        deleteHistories.add(new DeleteHistory(ContentType.QUESTION, questionId, question.getWriter(), LocalDateTime.now()));
+        deleteHistories.add(
+            new DeleteHistory(ContentType.QUESTION, questionId, question.getWriter(),
+                LocalDateTime.now()));
         for (Answer answer : answers) {
             answer.setDeleted(true);
-            deleteHistories.add(new DeleteHistory(ContentType.ANSWER, answer.getId(), answer.getWriter(), LocalDateTime.now()));
+            deleteHistories.add(
+                new DeleteHistory(ContentType.ANSWER, answer.getId(), answer.getWriter(),
+                    LocalDateTime.now()));
         }
         deleteHistoryService.saveAll(deleteHistories);
     }
+
+
+    @Transactional
+    public void deleteQuestion(NsUser loginUser, long questionId) throws CannotDeleteException {
+        Question question = questionRepository.findById(questionId)
+            .orElseThrow(NotFoundException::new);
+
+        deleteHistoryService.saveAll(question.deleteQuestion(loginUser).getDeleteHistories());
+    }
+
 }
